@@ -39,7 +39,8 @@ public class GenAssemblyMojo
     public void execute()
             throws MojoExecutionException {
         initConfig();
-        genxml();
+        genxml("release.xml");
+        genxml("src.xml");
 
     }
 
@@ -133,12 +134,12 @@ public class GenAssemblyMojo
         }
     }
 
-    public void genxml(){
-        //创建SAXReader对象
-        SAXReader saxReader=new SAXReader();
+    public void genxml(String urlxml){
         //获取XML文件路径
-        URL url= this.getClass().getClassLoader().getResource("release.xml");
+        URL url= this.getClass().getClassLoader().getResource(urlxml);
         try {
+            //创建SAXReader对象
+            SAXReader saxReader=new SAXReader();
             //生成文档对应实体
             Document document=saxReader.read(url);
 
@@ -151,14 +152,17 @@ public class GenAssemblyMojo
             }
 
             Element filesets = root.element("fileSets");
-            //CLASS
-            genClass(filesets);
-            //Resources
-            genResources(filesets);
-            //WEB
-            genWeb(filesets);
+            if("release.xml".equals(urlxml)){
+                //CLASS
+                genClass(filesets);
+                //WEB
+                genWeb(filesets);
+            }else{
+                //Resources
+                genResources(filesets);
+            }
             OutputFormat format = OutputFormat.createPrettyPrint();
-            XMLWriter xmlWriter = new XMLWriter(new FileOutputStream("./release.xml"),format);
+            XMLWriter xmlWriter = new XMLWriter(new FileOutputStream("./"+urlxml),format);
             xmlWriter.write(document);
             xmlWriter.close();
         } catch (DocumentException e) {
@@ -186,7 +190,12 @@ public class GenAssemblyMojo
         else
             directory.setText("./");
         Element outputDirectory = fileSet.addElement("outputDirectory");
-        outputDirectory.setText("./");
+        if(null != classOutputDirectory ){
+            getLog().debug("classOutputDirectory:"+classOutputDirectory);
+            outputDirectory.setText(classOutputDirectory);
+        }
+        else
+            outputDirectory.setText("./");
         if(!classPaths.isEmpty()){
             Element includes = fileSet.addElement("includes");
             //内容
@@ -296,6 +305,9 @@ public class GenAssemblyMojo
     @Parameter( defaultValue = "${project.build.outputDirectory}", required = true )
     private File classesDirectory;
 
+    @Parameter( defaultValue = "${project.build.classOutputDirectory}", required = true )
+    private String classOutputDirectory;
+
     /**
      * Classifier to add to the artifact generated. If given, the artifact will be attached
      * as a supplemental artifact.
@@ -325,5 +337,10 @@ public class GenAssemblyMojo
     protected File getClassesDirectory()
     {
         return classesDirectory;
+    }
+
+    protected String classOutputDirectory()
+    {
+        return classOutputDirectory;
     }
 }
