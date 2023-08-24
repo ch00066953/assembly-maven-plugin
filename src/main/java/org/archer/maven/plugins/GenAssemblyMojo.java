@@ -58,8 +58,11 @@ public class GenAssemblyMojo
                 if(file.startsWith("patch"))
                     initPath(baseFilePath+"/"+file);
             }
-        } else
+        } else{
+            getLog().info("配置路径:"+baseFilePath+" 不存在，使用默认路径："+pathname);
             initPath(pathname);
+        }
+
     }
 
     private void initPath(String pathname) throws MojoExecutionException {
