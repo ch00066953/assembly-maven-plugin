@@ -13,6 +13,8 @@ import org.dom4j.io.XMLWriter;
 
 import java.io.*;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,11 +32,11 @@ public class GenAssemblyMojo
         extends AbstractMojo
 {
 
-    Set<String> codePaths = new LinkedHashSet<String>();
-    Set<String> classPaths = new LinkedHashSet<String>();
-    Set<String> webPaths = new LinkedHashSet<String>();
-    Set<String> warnPaths = new LinkedHashSet<String>();
-    Set<String> onFilePaths = new LinkedHashSet<String>();
+    Set<String> codePaths = new LinkedHashSet<>();
+    Set<String> classPaths = new LinkedHashSet<>();
+    Set<String> webPaths = new LinkedHashSet<>();
+    Set<String> warnPaths = new LinkedHashSet<>();
+    Set<String> onFilePaths = new LinkedHashSet<>();
 
     public void execute()
             throws MojoExecutionException {
@@ -133,8 +135,6 @@ public class GenAssemblyMojo
             for (String w:onFilePaths) {
                 getLog().error("无效的文件路径:"+w);
             }
-//            warnPaths.forEach((s) -> getLog().error("非法的注释信息:"+s));
-//            onFilePaths.forEach((s) -> getLog().error("无效的文件路径:"+s));
             throw new MojoExecutionException("异常的路径");
         }
     }
@@ -167,23 +167,18 @@ public class GenAssemblyMojo
                 genResources(filesets);
             }
             OutputFormat format = OutputFormat.createPrettyPrint();
-            XMLWriter xmlWriter = new XMLWriter(new FileOutputStream("./"+urlxml),format);
+            XMLWriter xmlWriter = new XMLWriter(Files.newOutputStream(Paths.get("./" + urlxml)),format);
             xmlWriter.write(document);
             xmlWriter.close();
-        } catch (DocumentException e) {
+        } catch (DocumentException | IOException e) {
             e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+            getLog().error(e.getMessage(),e);
         }
     }
 
     /**
      * 生成class部分的xml
-     * @param filesets
+     * @param filesets 文件组
      */
     private void genClass(Element filesets) {
         Element fileSet = filesets.addElement("fileSet");
@@ -210,7 +205,7 @@ public class GenAssemblyMojo
                 Element include = includes.addElement("include");
                 include.setText(classPath);
             }
-        }else if(classPaths.isEmpty()){
+        }else {
             //Excludes
             Element excludes = fileSet.addElement("excludes");
             Element exclude = excludes.addElement("exclude");
@@ -223,7 +218,7 @@ public class GenAssemblyMojo
 
     /**
      * 生成Resources部分的xml
-     * @param filesets
+     * @param filesets 文件组
      */
     private void genResources(Element filesets) {
         Element fileSet = filesets.addElement("fileSet");
@@ -292,8 +287,7 @@ public class GenAssemblyMojo
 
     public boolean isAnnotation(String s) {
         if (s != null && s.length() > 0) {
-            boolean b = s.startsWith("-") || s.startsWith("#");
-            return b;
+            return s.startsWith("-") || s.startsWith("#");
         } else {
             return false;
         }
@@ -329,8 +323,6 @@ public class GenAssemblyMojo
     /**
      * The {@link {MavenProject}.
      */
-//    @Parameter( defaultValue = "${project}", readonly = true, required = true )
-//    protected MavenProject project;
     /**
      * {@inheritDoc}
      */
