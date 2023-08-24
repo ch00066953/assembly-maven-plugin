@@ -49,14 +49,16 @@ public class GenAssemblyMojo
 
         String pathname = "./patch.txt";
         String baseFilePath = "patch";
+        if(patchPath != null)
+            baseFilePath = patchPath;
         File f = new File(baseFilePath);
         String[] fs = f.list();
-        if(fs != null)
+        if(fs != null){
             for (String file : fs) {
                 if(file.startsWith("patch"))
                     initPath(baseFilePath+"/"+file);
             }
-        else
+        } else
             initPath(pathname);
     }
 
@@ -307,6 +309,10 @@ public class GenAssemblyMojo
 
     @Parameter( defaultValue = "${project.build.classOutputDirectory}", required = true )
     private String classOutputDirectory;
+
+
+    @Parameter( defaultValue = "${project.build.patchPath}", required = true )
+    private String patchPath;
 
     /**
      * Classifier to add to the artifact generated. If given, the artifact will be attached
