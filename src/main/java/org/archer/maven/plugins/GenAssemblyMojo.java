@@ -54,12 +54,17 @@ public class GenAssemblyMojo
         if(patchPath != null)
             baseFilePath = patchPath;
         File f = new File(baseFilePath);
+
         String[] fs = f.list();
         if(fs != null){
+            getLog().info("配置路径:"+baseFilePath+" 为文件夹，文件数:"+fs.length);
             for (String file : fs) {
                 if(file.startsWith("patch"))
                     initPath(baseFilePath+"/"+file);
             }
+        } else if(f.isFile()){
+            getLog().info("配置路径:"+baseFilePath+" 为文件");
+            initPath(baseFilePath);
         } else{
             getLog().info("配置路径:"+baseFilePath+" 不存在，使用默认路径："+pathname);
             initPath(pathname);
