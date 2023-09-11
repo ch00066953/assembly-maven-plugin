@@ -56,16 +56,27 @@ public class GenAssemblyMojo
         File f = new File(baseFilePath);
 
         String[] fs = f.list();
-        if(fs != null){
-            getLog().info("配置路径:"+baseFilePath+" 为文件夹，文件数:"+fs.length);
+        if(f.isFile()){
+            getLog().info("配置路径:"+baseFilePath+" 为文件");
+            initPath(baseFilePath);
+        } else if (f.isDirectory()){
+            getLog().info("配置路径:"+baseFilePath+" 为文件夹");
+            try{
+                List<File> allFiles = FileUtils.getAllFiles(f);
+                getLog().info("配置路径:"+baseFilePath+" 为文件夹，文件数:"+allFiles.size());
+                for (File file:allFiles) {
+                    initFile(file);
+                }
+            } catch (Exception e) {
+                getLog().error(e);
+                throw new MojoExecutionException(e.getMessage());
+            }
+
             for (String file : fs) {
                 if(file.startsWith("patch"))
                     initPath(baseFilePath+"/"+file);
             }
-        } else if(f.isFile()){
-            getLog().info("配置路径:"+baseFilePath+" 为文件");
-            initPath(baseFilePath);
-        } else{
+        }else{
             getLog().info("配置路径:"+baseFilePath+" 不存在，使用默认路径："+pathname);
             initPath(pathname);
         }
@@ -73,11 +84,15 @@ public class GenAssemblyMojo
     }
 
     private void initPath(String pathname) throws MojoExecutionException {
-        getLog().info("正在加载文件:"+pathname);
+//        getLog().info("正在加载文件:"+pathname);
         File config = new File(pathname);
 
+    }
+
+    private void initFile(File config) throws MojoExecutionException {
+        getLog().info("正在加载文件:"+config.getAbsolutePath());
         if (!config.exists()) {
-            getLog().warn("配置文件"+pathname+"不存在！");
+            getLog().warn("配置文件"+config.getAbsolutePath()+"不存在！");
             return;
 //            throw new IllegalArgumentException( "配置文件patch.txt不存在！程序将退出...");
         }
@@ -143,7 +158,6 @@ public class GenAssemblyMojo
             throw new MojoExecutionException("异常的路径");
         }
     }
-
     public void genxml(String urlxml){
         //获取XML文件路径
         URL url= this.getClass().getClassLoader().getResource(urlxml);
