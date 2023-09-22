@@ -6,6 +6,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.codehaus.plexus.util.StringUtils;
 import org.dom4j.*;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.SAXReader;
@@ -15,9 +16,7 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
@@ -32,21 +31,27 @@ public class GenAssemblyMojo
         extends AbstractMojo
 {
 
-    Set<String> codePaths = new LinkedHashSet<>();
-    Set<String> classPaths = new LinkedHashSet<>();
-    Set<String> webPaths = new LinkedHashSet<>();
-    Set<String> warnPaths = new LinkedHashSet<>();
-    Set<String> onFilePaths = new LinkedHashSet<>();
+    Set<String> codePaths = new LinkedHashSet<>();  //源代码路径
+    Set<String> classPaths = new LinkedHashSet<>(); //class路径
+    Set<String> webPaths = new LinkedHashSet<>();   //web路径
+    Set<String> warnPaths = new LinkedHashSet<>();  //非法的注释信息路径
+    Set<String> onFilePaths = new LinkedHashSet<>();    //无效的文件路径
+    Map<String,String> allFilePaths = new HashMap<>();   //记录已经加入的所有文件，key：文件路径，value 文件
+
+    Map<String,String> repeatFileMap = new HashMap<>(); //记录重复的文件，key：文件路径，value：文件，用，分割
 
     public void execute()
             throws MojoExecutionException {
         initConfig();
-        genxml("release.xml");
-        genxml("src.xml");
+        genXml("release.xml");
+        genXml("src.xml");
 
     }
 
-    public void initConfig() throws MojoExecutionException {
+    /**
+     * 初始化
+     */
+    private void initConfig() throws MojoExecutionException {
         getLog().info("读取配置文件patch.txt...");
 
         String pathname = "./patch.txt";
@@ -55,7 +60,6 @@ public class GenAssemblyMojo
             baseFilePath = patchPath;
         File f = new File(baseFilePath);
 
-        String[] fs = f.list();
         if(f.isFile()){
             getLog().info("配置路径:"+baseFilePath+" 为文件");
             initPath(baseFilePath);
@@ -71,7 +75,7 @@ public class GenAssemblyMojo
                 getLog().error(e);
                 throw new MojoExecutionException(e.getMessage());
             }
-
+            String[] fs = f.list();
             for (String file : fs) {
                 if(file.startsWith("patch"))
                     initPath(baseFilePath+"/"+file);
@@ -80,15 +84,26 @@ public class GenAssemblyMojo
             getLog().info("配置路径:"+baseFilePath+" 不存在，使用默认路径："+pathname);
             initPath(pathname);
         }
+        checkFilePaths();
 
     }
 
+    /**
+     * 初始文件
+     * @param pathname 文件路径
+     * @throws MojoExecutionException
+     */
     private void initPath(String pathname) throws MojoExecutionException {
 //        getLog().info("正在加载文件:"+pathname);
         File config = new File(pathname);
 
     }
 
+    /**
+     * 初始化文件
+     * @param config 配置文件
+     * @throws MojoExecutionException
+     */
     private void initFile(File config) throws MojoExecutionException {
         getLog().info("正在加载文件:"+config.getAbsolutePath());
         if (!config.exists()) {
@@ -132,6 +147,8 @@ public class GenAssemblyMojo
                         warnPaths.add(srcstr);
                     }else if(startWithChar(srcstr)&&!isFile(srcstr)){
                         onFilePaths.add(srcstr);
+                    }else if(startWithChar(srcstr)){
+                        checkFileRepeat(srcstr,config.getPath());
                     }
                 }
             }
@@ -147,7 +164,13 @@ public class GenAssemblyMojo
                 e.printStackTrace();
             }
         }
+    }
 
+    /**
+     * 校验文件是否正确
+     * @throws MojoExecutionException
+     */
+    private void checkFilePaths() throws MojoExecutionException {
         if (warnPaths.size() > 0 || onFilePaths.size() > 0){
             for (String w:warnPaths) {
                 getLog().error("非法的注释信息:"+w);
@@ -157,10 +180,21 @@ public class GenAssemblyMojo
             }
             throw new MojoExecutionException("异常的路径");
         }
+        if (!repeatFileMap.isEmpty()){
+            for (Map.Entry repeatEntry:repeatFileMap.entrySet()) {
+                getLog().warn("【patch:"+repeatEntry.getValue());
+                getLog().warn("存在重复的文件路径:"+repeatEntry.getKey()+"】");
+            }
+        }
     }
-    public void genxml(String urlxml){
+
+    /**
+     * 生成xml
+     * @param urlXml Xml路径
+     */
+    public void genXml(String urlXml){
         //获取XML文件路径
-        URL url= this.getClass().getClassLoader().getResource(urlxml);
+        URL url= this.getClass().getClassLoader().getResource(urlXml);
         try {
             //创建SAXReader对象
             SAXReader saxReader=new SAXReader();
@@ -176,7 +210,7 @@ public class GenAssemblyMojo
             }
 
             Element filesets = root.element("fileSets");
-            if("release.xml".equals(urlxml)){
+            if("release.xml".equals(urlXml)){
                 //CLASS
                 genClass(filesets);
                 //WEB
@@ -186,7 +220,7 @@ public class GenAssemblyMojo
                 genResources(filesets);
             }
             OutputFormat format = OutputFormat.createPrettyPrint();
-            XMLWriter xmlWriter = new XMLWriter(Files.newOutputStream(Paths.get("./" + urlxml)),format);
+            XMLWriter xmlWriter = new XMLWriter(Files.newOutputStream(Paths.get("./" + urlXml)),format);
             xmlWriter.write(document);
             xmlWriter.close();
         } catch (DocumentException | IOException e) {
@@ -266,6 +300,10 @@ public class GenAssemblyMojo
         fileMode.setText("0755");
     }
 
+    /**
+     * 生成Web部分的xml
+     * @param filesets 文件组
+     */
     private void genWeb(Element filesets) {
         Element fileSet = filesets.addElement("fileSet");
         Element directory = fileSet.addElement("directory");
@@ -294,6 +332,11 @@ public class GenAssemblyMojo
         fileMode.setText("0755");
     }
 
+    /**
+     * 判断开始字段是否英文字符
+     * @param s 字段
+     * @return
+     */
     public boolean startWithChar(String s) {
         if (s != null && s.length() > 0) {
             String start = s.trim().substring(0, 1);
@@ -304,6 +347,11 @@ public class GenAssemblyMojo
         }
     }
 
+    /**
+     * 判断是否注释
+     * @param s 判断字段
+     * @return
+     */
     public boolean isAnnotation(String s) {
         if (s != null && s.length() > 0) {
             return s.startsWith("-") || s.startsWith("#");
@@ -312,9 +360,34 @@ public class GenAssemblyMojo
         }
     }
 
+    /**
+     * 判断是否文件
+     * @param s 判断字段
+     * @return
+     */
     public boolean isFile(String s){
         File file = new File(s);
         return file.exists();
+    }
+
+    /**
+     * 检查重复文件，放入重复记录map
+     * @param sPath 代码文件路径
+     * @param patchPaths 版本文件路径
+     * @return 未重复返回true
+     */
+    private boolean checkFileRepeat(String sPath,String patchPaths){
+        String s = allFilePaths.get(sPath);
+        if (StringUtils.isEmpty(s))
+            allFilePaths.put(sPath,patchPaths);
+        else {
+            String sRepeatPatchPath = repeatFileMap.get(sPath);
+            if(StringUtils.isEmpty(sRepeatPatchPath))
+                repeatFileMap.put(sPath,s+","+patchPaths);
+            else
+                repeatFileMap.put(sPath,sRepeatPatchPath+","+patchPaths);
+        }
+        return StringUtils.isEmpty(s);
     }
 
     /**
