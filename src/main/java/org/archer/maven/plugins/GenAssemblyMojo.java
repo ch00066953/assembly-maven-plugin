@@ -96,7 +96,7 @@ public class GenAssemblyMojo
     private void initPath(String pathname) throws MojoExecutionException {
 //        getLog().info("正在加载文件:"+pathname);
         File config = new File(pathname);
-
+        initFile(config);
     }
 
     /**
