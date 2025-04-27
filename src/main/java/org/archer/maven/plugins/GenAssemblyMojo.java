@@ -75,11 +75,11 @@ public class GenAssemblyMojo
                 getLog().error(e);
                 throw new MojoExecutionException(e.getMessage());
             }
-            String[] fs = f.list();
+            /*String[] fs = f.list();
             for (String file : fs) {
                 if(file.startsWith("patch"))
                     initPath(baseFilePath+"/"+file);
-            }
+            }*/
         }else{
             getLog().info("配置路径:"+baseFilePath+" 不存在，使用默认路径："+pathname);
             initPath(pathname);
