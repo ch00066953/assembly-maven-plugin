@@ -4,7 +4,7 @@
   <groupId>org.archer.maven.plugins</groupId>
   <artifactId>assembly-maven-plugin</artifactId>
   <packaging>maven-plugin</packaging>
-  <version>1.0.7</version>
+  <version>1.0.8</version>
   <name>assembly-maven-plugin Maven Mojo</name>
   <url>http://maven.apache.org</url>
   <properties>
@@ -36,7 +36,6 @@
       <groupId>org.apache.maven.plugin-tools</groupId>
       <artifactId>maven-plugin-annotations</artifactId>
       <version>3.2</version>
-      <scope>provided</scope>
     </dependency>
 <!--    <dependency>-->
 <!--      <groupId>org.apache.maven</groupId>-->

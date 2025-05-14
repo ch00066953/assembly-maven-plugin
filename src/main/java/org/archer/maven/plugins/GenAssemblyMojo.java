@@ -55,35 +55,41 @@ public class GenAssemblyMojo
         getLog().info("读取配置文件patch.txt...");
 
         String pathname = "./patch.txt";
-        String baseFilePath = "patch";
+        //String baseFilePath = "patch";
+        String baseFilePaths = "patch";
         if(patchPath != null)
-            baseFilePath = patchPath;
-        File f = new File(baseFilePath);
+            baseFilePaths = patchPath;
 
-        if(f.isFile()){
-            getLog().info("配置路径:"+baseFilePath+" 为文件");
-            initPath(baseFilePath);
-        } else if (f.isDirectory()){
-            getLog().info("配置路径:"+baseFilePath+" 为文件夹");
-            try{
-                List<File> allFiles = FileUtils.getAllFiles(f);
-                getLog().info("配置路径:"+baseFilePath+" 为文件夹，文件数:"+allFiles.size());
-                for (File file:allFiles) {
-                    initFile(file);
+        String[] splitBaseFilePath = splitChar.split(baseFilePaths);
+        for(String baseFilePath : splitBaseFilePath){
+            File f = new File(baseFilePath);
+
+            if(f.isFile()){
+                getLog().info("配置路径:"+baseFilePath+" 为文件");
+                initPath(baseFilePath);
+            } else if (f.isDirectory()){
+                getLog().info("配置路径:"+baseFilePath+" 为文件夹");
+                try{
+                    List<File> allFiles = FileUtils.getAllFiles(f);
+                    getLog().info("配置路径:"+baseFilePath+" 为文件夹，文件数:"+allFiles.size());
+                    for (File file:allFiles) {
+                        initFile(file);
+                    }
+                } catch (Exception e) {
+                    getLog().error(e);
+                    throw new MojoExecutionException(e.getMessage());
                 }
-            } catch (Exception e) {
-                getLog().error(e);
-                throw new MojoExecutionException(e.getMessage());
-            }
             /*String[] fs = f.list();
             for (String file : fs) {
                 if(file.startsWith("patch"))
                     initPath(baseFilePath+"/"+file);
             }*/
-        }else{
-            getLog().info("配置路径:"+baseFilePath+" 不存在，使用默认路径："+pathname);
-            initPath(pathname);
+            }else{
+                getLog().info("配置路径:"+baseFilePath+" 不存在，使用默认路径："+pathname);
+                initPath(pathname);
+            }
         }
+
         checkFilePaths();
 
     }
@@ -403,6 +409,8 @@ public class GenAssemblyMojo
     @Parameter( defaultValue = "${project.build.patchPath}", required = true )
     private String patchPath;
 
+    @Parameter( defaultValue = "${project.build.splitChar}", required = false )
+    private String splitChar = ";";
     /**
      * Classifier to add to the artifact generated. If given, the artifact will be attached
      * as a supplemental artifact.
