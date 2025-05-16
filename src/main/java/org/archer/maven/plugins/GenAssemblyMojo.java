@@ -57,10 +57,15 @@ public class GenAssemblyMojo
         String pathname = "./patch.txt";
         //String baseFilePath = "patch";
         String baseFilePaths = "patch";
-        if(patchPath != null)
+        if(patchPath != null){
             baseFilePaths = patchPath;
+        }else{
+            getLog().info("未配置patchPath,使用默认文件"+baseFilePaths);
+        }
 
-        String[] splitBaseFilePath = splitChar.split(baseFilePaths);
+        String[] splitBaseFilePath = baseFilePaths.split(splitChar);
+        getLog().info("共"+splitBaseFilePath.length+"个文件，文件为"+baseFilePaths);
+
         for(String baseFilePath : splitBaseFilePath){
             File f = new File(baseFilePath);
 
